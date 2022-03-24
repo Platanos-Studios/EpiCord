@@ -9,11 +9,12 @@ const commandsFolder = fs.readdirSync("./Commands");
 client.commands = new Discord.Collection();
 
 for (const folder of commandsFolder) {
-   const commandsFiles = require(`./Commands/${folder}`).filter(file => file.endsWith(".js"));
-   for (const file of commandsFiles) {
-       const command = require(`./Commands/${folder}/${file}`);
-       client.commands.set(command.data.name, command);
-   }
+	const commandFiles = fs.readdirSync(`./Commands/${folder}`).filter(file => file.endsWith('.js'));
+
+	for (const file of commandFiles) {
+		const command = require(`./Commands/${folder}/${file}`);
+		client.commands.set(command.data.name, command);
+	}
 }
 
 client.on('interactionCreate', async (interaction) => {
