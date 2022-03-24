@@ -6,7 +6,7 @@ const fs = require("fs");
 
 require("dotenv").config();
 
-let commands = []
+let commands = [];
 const commandsFolder = fs.readdirSync("./Commands");
 client.commands = new Discord.Collection();
 
