@@ -15,7 +15,7 @@ for (const folder of commandsFolder) {
 
 	for (const file of commandFiles) {
 		const command = require(`./Commands/${folder}/${file}`);
-		commands.push(command.data.toJSON())
+		commands.push(command.data.toJSON());
 		client.commands.set(command.data.name, command);
 	}
 }
