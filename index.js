@@ -7,8 +7,11 @@ const fs = require("fs");
 require("dotenv").config();
 
 let commands = [];
+let functions = {};
 const commandsFolder = fs.readdirSync("./Commands");
 client.commands = new Discord.Collection();
+
+client.login(process.env.TOKEN);
 
 for (const folder of commandsFolder) {
 	const commandFiles = fs.readdirSync(`./Commands/${folder}`).filter(file => file.endsWith('.js'));
@@ -16,32 +19,35 @@ for (const folder of commandsFolder) {
 	for (const file of commandFiles) {
 		const command = require(`./Commands/${folder}/${file}`);
 		commands.push(command.data.toJSON());
-		client.commands.set(command.data.name, command);
+		functions[command.data.name] = command.execute;
 	}
 }
 
 const rest = new REST({ version: '9' }).setToken(process.env.TOKEN);
 
-rest.put(Routes.applicationGuildCommands(process.env.clientId, process.env.guildId), { body: commands })
-	.then(() => console.log('Successfully registered application commands.'))
-	.catch(console.error);
+(async () => {
+	try {
+		await rest.put(Routes.applicationGuildCommands(process.env.clientId, process.env.guildId), { body: commands })
+		console.log("Commands loaded");
+	} catch (e) {
+		console.log(e);
+	}
+})()
 
 client.on('interactionCreate', async (interaction) => {
  	if (!interaction.isCommand()) return;
 
-	const command = client.commands.get(interaction.commandName);
+	const command = functions[interaction.commandName];
 
 	if (!command) return;
 
 	try {
-		await command.execute(interaction);
+		await command(interaction);
 	} catch (error) {
 		console.error(error);
 		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
 	}
 });
-
-client.login(process.env.TOKEN);
 
 client.on("ready", () => {
     console.log("Bot is online!")
