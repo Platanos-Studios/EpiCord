@@ -25,7 +25,7 @@ module.exports = {
 		const fields = data.map((e) => ({
 			name: e.acti_title,
 			value: `${e.start.substring(8, 10)}/${e.start.substring(5, 7)} - ${e.start.substring(11, 16)} - ${e.room?.code ? e.room.code.split('/')[e.room.code.split('/').length - 1] : "No room"}`,
-			inline: true
+			inline: false
 		}))
 
 		const embed = new MessageEmbed()
