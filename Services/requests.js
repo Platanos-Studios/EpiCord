@@ -1,35 +1,34 @@
 const fetch = require("node-fetch")
 const fs = require('fs')
 
-var logins = {}
-
 async function addAutoLogin(autoLogin, discordID) {
-	let login = await getInfos(autoLogin)
-	logins[discordID] = {
-		link: autoLogin,
-		mail: login.mail
+	let logins = getLogins();
+	logins[discordID] = autoLogin
+	saveLogins(logins)
+}
+
+function getLogins() {
+	let fileLogins = {}
+	try {
+		fileLogins = require('../logins.json')
+	} catch (e) {
+		fs.writeFileSync("./logins.json", JSON.stringify(fileLogins), null, 2, (e) => e && console.log(e));
 	}
+	return fileLogins;
 }
 
 function getLogin(discordID) {
+	let logins = getLogins();
 	return logins[discordID]
 }
 
-function loadLogins() {
-	try {
-		const fileLogins = require('./logins.json');
-		logins = JSON.parse(fileLogins);
-	} catch (e) {}
-}
-
-function saveLogins() {
-	console.log(logins)
+function saveLogins(logins) {
 	fs.writeFileSync("./logins.json", JSON.stringify(logins), null, 2, (e) => e && console.log(e));
 }
 
 async function testLogin(login) {
-	const response = await fetch(`${login}`)
-	return response.ok
+	const response = await fetch(`${login}/?format=json`)
+	return response.status == 200
 }
 
 // const dashboardInfos = `${randomAutoLogin}/?format=json`
@@ -84,16 +83,41 @@ async function getPlanning(autologin, start = new Date(), end = new Date()) {
 	return json;
 }
 
+async function getModuleInformations(autologin, module) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const city = infos.location
+	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/?format=json`)
+	let json = await response.json()
+	return json
+}
+
+async function getListProjects(autologin, start, end) {
+	const response = await fetch(`${autologin}/module/board?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
+	let json = await response.json()
+	return json
+}
+
+async function getListProjectRegistered(autologin, start, end) {
+	const response = await fetch(`${autologin}/module/board?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
+	let json = await response.json()
+	return json.filter((e) => e.registered)
+}
+
 async function getModuleRegisteredActivities(autologin, start = new Date(), end = new Date()) {
 	const response = await fetch(`${autologin}/planning/load?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
 	let json = await response.json()
-	return json.filter((e) => e.module_registered == true)
+	return json.filter((e) => e.module_registered)
 }
 
 async function getRegisteredActivities(autologin, start = new Date(), end = new Date()) {
 	const response = await fetch(`${autologin}/planning/load?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
 	let json = await response.json()
-	return json.filter((e) => e.event_registered == "registered")
+	try {
+		return json.filter((e) => e.event_registered == "registered" || e.event_registered == "present" || e.event_registered == "absent")
+	} catch (e) {
+		return []
+	}
 }
 
 module.exports = {
@@ -107,8 +131,10 @@ module.exports = {
 	getPlanning,
 	getModuleRegisteredActivities,
 	getRegisteredActivities,
+	getModuleInformations,
+	getListProjectRegistered,
+	getListProjects,
 	getLogin,
-	loadLogins,
 	saveLogins,
 	testLogin
 }

@@ -1,9 +1,9 @@
 const { SlashCommandBuilder } = require('@discordjs/builders')
-const { MessageEmbed } = require('discord.js')
-const { getRegisteredActivities, getLogin } = require("../../Services/requests.js")
+const { MessageEmbed } = require('discord.js');
+const { getModuleRegisteredActivities, getLogin, getListProjectRegistered } = require('../../Services/requests');
 
 module.exports = {
-	data: new SlashCommandBuilder().setName('activities').setDescription('Gets the intra activities between two dates, default is today and tomorrow').addStringOption((option) => {
+	data: new SlashCommandBuilder().setName('projects').setDescription('Gets the current projects').addStringOption((option) => {
 		return option.setName('start').setDescription(`The start date, format is DD MM YYYY, DD MM or DD`).setRequired(false);
 	}).addStringOption((option) => {
 		return option.setName('end').setDescription(`The end date, format is DD MM YYYY, DD MM or DD`).setRequired(false);
@@ -21,16 +21,16 @@ module.exports = {
 		argsEnd.length == 3 && end.setFullYear(argsEnd[2])
 		argsEnd.length >= 2 && end.setMonth(argsEnd[1] - 1)
 		argsEnd.length >= 1 && end.setDate(argsEnd[0])
-		const data = await getRegisteredActivities(await getLogin(interaction.member.id), start, end);
+		const data = await getListProjectRegistered(await getLogin(interaction.member.id), start, end)
 		const fields = data.map((e) => ({
 			name: e.acti_title,
-			value: `${e.start.substring(8, 10)}/${e.start.substring(5, 7)} - ${e.start.substring(11, 16)} - ${e.room?.code ? e.room.code.split('/')[e.room.code.split('/').length - 1] : "No room"}`,
+			value: `**${e.title_module}**\n${e.codemodule}`,
 			inline: true
 		}))
 
 		const embed = new MessageEmbed()
 			.setColor('#0099ff')
-			.setTitle('Activities')
+			.setTitle('Current projects')
 			.setFields(...fields)
 		interaction.reply({ embeds: [embed] })
 	}

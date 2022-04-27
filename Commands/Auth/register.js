@@ -8,9 +8,9 @@ module.exports = {
 	async execute(interaction) {
 		const login = interaction.options.getString('login');
 
-		await addAutoLogin(login, interaction.member.id);
-		if (await testLogin()) {
-			saveLogins()
+		const res = await testLogin(login)
+		if (res) {
+			await addAutoLogin(login, interaction.member.id);
 			interaction.reply("Sucessfully registered !")
 		} else
 			interaction.reply("An error occured");

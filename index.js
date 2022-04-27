@@ -53,5 +53,4 @@ client.on('interactionCreate', async (interaction) => {
 client.on("ready", () => {
     console.log("Bot is online!")
     client.user.setActivity("Being constructed...", { type: "PLAYING" });
-	loadLogins()
 })
