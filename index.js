@@ -26,17 +26,8 @@ for (const folder of commandsFolder) {
 
 const rest = new REST({ version: '9' }).setToken(process.env.TOKEN);
 
-(async () => {
-	try {
-		await rest.put(Routes.applicationGuildCommands(process.env.clientId, process.env.guildId), { body: commands })
-		console.log("Commands loaded");
-	} catch (e) {
-		console.log(e);
-	}
-})()
-
 client.on('interactionCreate', async (interaction) => {
- 	if (!interaction.isCommand()) return;
+	if (!interaction.isCommand()) return;
 
 	const command = functions[interaction.commandName];
 
@@ -50,7 +41,15 @@ client.on('interactionCreate', async (interaction) => {
 	}
 });
 
-client.on("ready", () => {
-    console.log("Bot is online!")
-    client.user.setActivity("Being constructed...", { type: "PLAYING" });
+client.on("ready", async (client) => {
+	console.log("Bot is online!")
+	try {
+		await Promise.all(client.guilds.cache.map(async (e) => {
+			await rest.put(Routes.applicationGuildCommands(process.env.clientId, e.id), { body: commands })
+		}))
+		console.log("Commands loaded");
+	} catch (e) {
+		console.log(e);
+	}
+	client.user.setActivity("Being constructed...", { type: "PLAYING" });
 })

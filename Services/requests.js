@@ -77,25 +77,33 @@ async function getNetsoul(autologin, user) {
 	return json;
 }
 
-async function getPlanning(autologin, start = new Date(), end = new Date()) {
+async function getPlanning(autologin, start = new Date(Date.now()), end = new Date(start.getTime() + (24 * 60 * 60 * 1000))) {
 	const response = await fetch(`${autologin}/planning/load?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
 	let json = await response.json()
 	return json;
 }
 
-async function getModuleInformations(autologin, module) {
+async function getProjectInformations(autologin, module, city, acti) {
 	const infos = await getInfos(autologin)
 	const year = infos.scolaryear
-	const city = infos.location
+	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/${acti}/project/?format=json`)
+	let json = await response.json()
+	return json
+}
+
+async function getModuleInformations(autologin, module, city) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
 	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/?format=json`)
 	let json = await response.json()
 	return json
 }
 
 async function getListProjects(autologin, start, end) {
+	const infos = await getInfos(autologin)
 	const response = await fetch(`${autologin}/module/board?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
 	let json = await response.json()
-	return json
+	return json.filter((e) => e.semester === 0 || e.semester === infos.semester)
 }
 
 async function getListProjectRegistered(autologin, start, end) {
@@ -104,13 +112,20 @@ async function getListProjectRegistered(autologin, start, end) {
 	return json.filter((e) => e.registered)
 }
 
-async function getModuleRegisteredActivities(autologin, start = new Date(), end = new Date()) {
+async function getActivities(autologin, start = new Date(Date.now()), end = new Date(start.getTime() + (24 * 60 * 60 * 1000))) {
+	const infos = await getInfos(autologin)
+	const response = await fetch(`${autologin}/planning/load?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
+	let json = await response.json()
+	return json.filter((e) => e.semester === 0 || e.semester === infos.semester)
+}
+
+async function getModuleRegisteredActivities(autologin, start = new Date(Date.now()), end = new Date(start.getTime() + (24 * 60 * 60 * 1000))) {
 	const response = await fetch(`${autologin}/planning/load?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
 	let json = await response.json()
 	return json.filter((e) => e.module_registered)
 }
 
-async function getRegisteredActivities(autologin, start = new Date(), end = new Date()) {
+async function getRegisteredActivities(autologin, start = new Date(Date.now()), end = new Date(start.getTime() + (24 * 60 * 60 * 1000))) {
 	const response = await fetch(`${autologin}/planning/load?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
 	let json = await response.json()
 	try {
@@ -118,6 +133,68 @@ async function getRegisteredActivities(autologin, start = new Date(), end = new 
 	} catch (e) {
 		return []
 	}
+}
+
+async function getEvent(autologin, module, city, activity, event) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/${event}/?format=json`)
+	let json = await response.json()
+	return json
+}
+
+async function registerModule(autologin, module, city) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/register?format=json`, {
+		method: 'POST'
+	});
+	return response
+}
+
+async function registerProject(autologin, module, city, activity) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/register?format=json`, {
+		method: 'POST'
+	});
+	return response
+}
+
+async function registerEvent(autologin, module, city, activity, event) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/${event}/register?format=json`, {
+		method: 'POST'
+	});
+	return response
+}
+
+async function unregisterModule(autologin, module, city) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/unregister?format=json`, {
+		method: 'POST'
+	});
+	return response
+}
+
+async function unregisterProject(autologin, module, city, activity) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/unregister?format=json`, {
+		method: 'POST'
+	});
+	return response
+}
+
+async function unregisterEvent(autologin, module, city, activity, event) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/${event}/unregister?format=json`, {
+		method: 'POST'
+	});
+	return response
 }
 
 module.exports = {
@@ -129,12 +206,21 @@ module.exports = {
 	getMarks,
 	getNetsoul,
 	getPlanning,
+	getActivities,
+	getEvent,
 	getModuleRegisteredActivities,
 	getRegisteredActivities,
 	getModuleInformations,
+	getProjectInformations,
 	getListProjectRegistered,
 	getListProjects,
 	getLogin,
 	saveLogins,
-	testLogin
+	testLogin,
+	registerEvent,
+	registerModule,
+	registerProject,
+	unregisterEvent,
+	unregisterModule,
+	unregisterProject
 }
