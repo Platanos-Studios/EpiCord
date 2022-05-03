@@ -7,6 +7,26 @@ async function addAutoLogin(autoLogin, discordID) {
 	saveLogins(logins)
 }
 
+async function removeAutoLogin(discordID) {
+	let logins = getLogins();
+	delete logins[discordID]
+	saveLogins(logins)
+}
+
+function saveConfig(config) {
+	fs.writeFileSync("./config.json", JSON.stringify(config), null, 2, (e) => e && console.log(e));
+}
+
+function getConfig() {
+	let config = {}
+	try {
+		config = require('../config.json')
+	} catch (e) {
+		fs.writeFileSync("./config.json", JSON.stringify(config), null, 2, (e) => e && console.log(e));
+	}
+	return config;
+}
+
 function getLogins() {
 	let fileLogins = {}
 	try {
@@ -30,16 +50,6 @@ async function testLogin(login) {
 	const response = await fetch(`${login}/?format=json`)
 	return response.status == 200
 }
-
-// const dashboardInfos = `${randomAutoLogin}/?format=json`
-// const myInfos = `${randomAutoLogin}/user/?format=json`
-// const myFlags = `${randomAutoLogin}/user/florian.garnier@epitech.eu/flags?format=json`
-// const myBinomes = `${randomAutoLogin}/user/florian.garnier@epitech.eu/binome?format=json`
-// const myMarks = `${randomAutoLogin}/user/florian.garnier%40epitech.eu/notes?format=json`
-// const myNetsoul = `${randomAutoLogin}/user/florian.garnier%40epitech.eu/netsoul?format=json`
-// const planning = `${randomAutoLogin}/planning/load?format=json&start=2022-03-01&end=2022-03-05`
-// const modules = `${randomAutoLogin}/module/board?format=json&start=2022-03-01&end=2022-03-05`
-// const myPlanning = `${randomAutoLogin}/planning/my-schedules?format=json&start=2022-03-01&end=2022-03-05`
 
 async function getDashboardInfos(autologin) {
 	const response = await fetch(`${autologin}/?format=json`)
@@ -99,14 +109,17 @@ async function getModuleInformations(autologin, module, city) {
 	return json
 }
 
-async function getListProjects(autologin, start, end) {
+async function getListProjects(autologin, start = new Date(Date.now()), end = new Date(start.getTime() + (24 * 60 * 60 * 1000))) {
 	const infos = await getInfos(autologin)
 	const response = await fetch(`${autologin}/module/board?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
 	let json = await response.json()
-	return json.filter((e) => e.semester === 0 || e.semester === infos.semester)
+	return json.filter((e) => {
+		const semester = e.codeinstance.split('-')[1]
+		return semester == 0 || semester == infos.semester
+	})
 }
 
-async function getListProjectRegistered(autologin, start, end) {
+async function getListProjectRegistered(autologin, start = new Date(Date.now()), end = new Date(start.getTime() + (24 * 60 * 60 * 1000))) {
 	const response = await fetch(`${autologin}/module/board?format=json&start=${start.toISOString().split('T')[0]}&end=${end.toISOString().split('T')[0]}`)
 	let json = await response.json()
 	return json.filter((e) => e.registered)
@@ -152,12 +165,29 @@ async function registerModule(autologin, module, city) {
 	return response
 }
 
-async function registerProject(autologin, module, city, activity) {
+async function registerProject(autologin, module, city, activity, members = [], groupTitle = "") {
 	const infos = await getInfos(autologin)
 	const year = infos.scolaryear
-	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/register?format=json`, {
-		method: 'POST'
-	});
+	let response = {}
+	if (members.length === 0) {
+		response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/project/register?format=json`, {
+			method: 'POST'
+		});
+	} else {
+		let str = ""
+		members.forEach((e) => {
+			str += `members%5B%5D=${e}&`
+		})
+		str += `title=${groupTitle}&force=false`
+		response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/project/register?format=json`, {
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/x-www-form-urlencoded"
+			},
+			method: 'POST',
+			body: str
+		});
+	}
 	return response
 }
 
@@ -182,9 +212,19 @@ async function unregisterModule(autologin, module, city) {
 async function unregisterProject(autologin, module, city, activity) {
 	const infos = await getInfos(autologin)
 	const year = infos.scolaryear
-	const response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/unregister?format=json`, {
+	let response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/unregister?format=json`, {
 		method: 'POST'
 	});
+	if (response.status !== 200) {
+		response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/destroygroup?format=json`, {
+			method: 'POST'
+		});
+		if (response.status !== 200) {
+			response = await fetch(`${autologin}/module/${year}/${module}/${city}/${activity}/leavegroup?format=json`, {
+				method: 'POST'
+			});
+		}
+	}
 	return response
 }
 
@@ -199,6 +239,7 @@ async function unregisterEvent(autologin, module, city, activity, event) {
 
 module.exports = {
 	addAutoLogin,
+	removeAutoLogin,
 	getDashboardInfos,
 	getInfos,
 	getFlags,
@@ -222,5 +263,7 @@ module.exports = {
 	registerProject,
 	unregisterEvent,
 	unregisterModule,
-	unregisterProject
+	unregisterProject,
+	getConfig,
+	saveConfig
 }

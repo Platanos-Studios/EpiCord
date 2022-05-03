@@ -51,28 +51,67 @@ module.exports = {
 			End: ${currentProject.end.substring(8, 10)}/${currentProject.end.substring(5, 7)} - ${currentProject.end.substring(11, 16)}
 			Between ${currentProject.nb_min} and ${currentProject.nb_max} persons`)
 					.setURL(`https://intra.epitech.eu/module/${currentProject.scolaryear}/${currentProject.codemodule}/${currentProject.codeinstance}/${currentProject.codeacti}/project/#!/group`)
-				const row = new MessageActionRow().addComponents(
-					new MessageButton()
-						.setCustomId(`register§${currentProject.codemodule}§${currentProject.codeinstance}§${currentProject.codeacti}`)
-						.setLabel("Register")
-						.setStyle('PRIMARY'),
-					new MessageButton()
-						.setCustomId(`unregister§${currentProject.codemodule}§${currentProject.codeinstance}§${currentProject.codeacti}`)
-						.setLabel("Unregister")
-						.setStyle('SECONDARY')
-				)
-				const message = await interaction.editReply({ embeds: [embed], components: [row] })
-				const collector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: 60000 * 5 })
-				collector.on('collect', async i => {
-					const userLogin = await getLogin(i.user.id);
-					const args = i.customId.split('§')
-					let res = {}
-					if (args[0] == 'register')
-						res = await registerProject(userLogin, args[1], args[2], args[3])
-					else if (args[0] == 'unregister')
-						res = await unregisterProject(userLogin, args[1], args[2], args[3])
+				if (currentProject.nb_min <= 1) {
+					const row = new MessageActionRow().addComponents(
+						new MessageButton()
+							.setCustomId(`register§${currentProject.codemodule}§${currentProject.codeinstance}§${currentProject.codeacti}`)
+							.setLabel("Register")
+							.setStyle('PRIMARY'),
+						new MessageButton()
+							.setCustomId(`unregister§${currentProject.codemodule}§${currentProject.codeinstance}§${currentProject.codeacti}`)
+							.setLabel("Unregister")
+							.setStyle('DANGER')
+					)
+					const message = await interaction.editReply({ embeds: [embed], components: [row] })
+					const collector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: 60000 * 5 })
+					collector.on('collect', async i => {
+						const userLogin = await getLogin(i.user.id);
+						const args = i.customId.split('§')
+						let res = {}
+						if (args[0] == 'register')
+							res = await registerProject(userLogin, args[1], args[2], args[3])
+						else if (args[0] == 'unregister')
+							res = await unregisterProject(userLogin, args[1], args[2], args[3])
 						await i.reply(res.status === 200 ? `Successfully ${args[0] == 'register' ? 'Registered' : 'Unregistered'}` : `Error: ${res.statusText}`)
-				})
+					})
+				} else {
+					const message = await interaction.editReply({ embeds: [embed] })
+					await interaction.followUp(`This project is in group of ${currentProject.nb_min} to ${currentProject.nb_max} persons, if you want to register, please mention them or send their email addresses, if you want a custom group name, put it after or while listing members. If you want to delete the group, just write delete`)
+					const collected = await message.channel.awaitMessages({ max: 1, time: 30000 })
+					let custom = undefined
+					if (collected.first().content === "delete") {
+						const response = await unregisterProject(login, currentProject.codemodule, currentProject.codeinstance, currentProject.codeacti)
+						if (response.status === 200)
+							await interaction.followUp(`Successfully unregistered`)
+						else
+							await interaction.followUp(`Error: ${response.statusText}`)
+						return
+					}
+					let members = await Promise.all(collected.first().content.split(' ').map(async (e, i) => {
+						if (e.startsWith('<'))
+							return await getLogin(e.substring(2, 20))
+						if (!e.includes("@epitech.eu")) {
+							if (custom)
+								custom = {}
+							else
+								custom = {
+									index: i,
+									value: e
+								}
+						}
+						return e
+					}))
+					if (Object.keys(custom) === 0)
+						return;
+					if (custom)
+						members = members.filter((e, i) => i !== custom.index)
+					let response = await registerProject(login, currentProject.codemodule, currentProject.codeinstance, currentProject.codeacti, members, custom?.value || "")
+					if (response.status === 200) {
+						message.reply('Successfully registered')
+					} else {
+						message.reply(`Error: ${response.statusText}`)
+					}
+				}
 			}
 		} catch (e) {
 			console.log(e);

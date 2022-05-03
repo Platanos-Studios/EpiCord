@@ -66,7 +66,7 @@ module.exports = {
 					new MessageButton()
 						.setCustomId(`unregister§${currentModule.codemodule}§${currentModule.codeinstance}`)
 						.setLabel("Unregister")
-						.setStyle('SECONDARY')
+						.setStyle('DANGER')
 				)
 				const message = await interaction.editReply({ embeds: [embed], components: [row] })
 				const collector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: 60000 * 5 })

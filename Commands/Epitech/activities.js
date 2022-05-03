@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders')
 const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
-const { getRegisteredActivities, getLogin, getActivities, registerEvent, unregisterEvent } = require("../../Services/requests.js")
+const { getRegisteredActivities, getLogin, getActivities, registerEvent, unregisterEvent, getConfig } = require("../../Services/requests.js")
 
 module.exports = {
 	data: new SlashCommandBuilder().setName('activities').setDescription('Gets the intra activities between two dates, default is today and tomorrow').addStringOption((option) => {
@@ -64,7 +64,7 @@ module.exports = {
 					new MessageButton()
 						.setCustomId(`unregister§${currentActivity.codemodule}§${currentActivity.codeinstance}§${currentActivity.codeacti}§${currentActivity.codeevent}`)
 						.setLabel("Unregister")
-						.setStyle('SECONDARY')
+						.setStyle('DANGER')
 				)
 				embed.setTitle(currentActivity.acti_title)
 					.setURL(`https://intra.epitech.eu/module/${currentActivity.scolaryear}/${currentActivity.codemodule}/${currentActivity.codeinstance}/${currentActivity.codeacti}/${currentActivity.codeevent}/registered`)
@@ -76,8 +76,9 @@ module.exports = {
 					const userLogin = await getLogin(i.user.id);
 					const args = i.customId.split('§')
 					let res = {}
-					if (args[0] == 'register')
+					if (args[0] == 'register') {
 						res = await registerEvent(userLogin, args[1], args[2], args[3], args[4])
+					}
 					else if (args[0] == 'unregister')
 						res = await unregisterEvent(userLogin, args[1], args[2], args[3], args[4])
 						await i.reply(res.status === 200 ? `Successfully ${args[0] == 'register' ? 'Registered' : 'Unregistered'}` : `Error: ${res.statusText}`)
