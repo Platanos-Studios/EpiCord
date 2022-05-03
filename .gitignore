@@ -3,3 +3,4 @@ node_modules
 file*
 test.js
 logins.json
+config.json

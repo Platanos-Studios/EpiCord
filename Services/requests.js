@@ -1,5 +1,7 @@
 const fetch = require("node-fetch")
 const fs = require('fs')
+const { MessageActionRow, MessageButton } = require('discord.js');
+
 
 async function addAutoLogin(autoLogin, discordID) {
 	let logins = getLogins();
@@ -165,6 +167,81 @@ async function registerModule(autologin, module, city) {
 	return response
 }
 
+async function informChannelActivity(user, guild, currentActivity) {
+	const config = getConfig()
+	const channelID = config[guild.id]
+	if (!channelID)
+		return;
+	const channel = guild.channels.cache.get(channelID)
+	const row = new MessageActionRow().addComponents(
+		new MessageButton()
+			.setCustomId(`${currentActivity.codemodule}§${currentActivity.codeinstance}§${currentActivity.codeacti}§${currentActivity.codeevent}`)
+			.setLabel("Register")
+			.setStyle('PRIMARY')
+	)
+	const message = await channel.send({
+		content: `@everyone, ${user.username} just registered to ${currentActivity.title}, you can also register by clicking on the button below`,
+		components: [row]
+	})
+	const collector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: 60000 * 30 })
+	collector.on('collect', async i => {
+		const userLogin = await getLogin(i.user.id);
+		const args = i.customId.split('§')
+		let res = await registerEvent(userLogin, args[0], args[1], args[2], args[3])
+		await i.reply(res.status === 200 ? `Successfully Registered` : `Error: ${res.statusText}`)
+	})
+}
+
+async function informChannelProject(user, guild, currentProject) {
+	const config = getConfig()
+	const channelID = config[guild.id]
+	if (!channelID)
+		return;
+	const channel = guild.channels.cache.get(channelID)
+	const row = new MessageActionRow().addComponents(
+		new MessageButton()
+			.setCustomId(`${currentProject.codemodule}§${currentProject.codeinstance}§${currentProject.codeacti}`)
+			.setLabel("Register")
+			.setStyle('PRIMARY')
+	)
+	const message = await channel.send({
+		content: `@everyone, ${user.username} just registered to ${currentProject.title}, you can also register by clicking on the button below`,
+		components: [row]
+	})
+	const collector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: 60000 * 30 })
+	collector.on('collect', async i => {
+		const userLogin = await getLogin(i.user.id);
+		const args = i.customId.split('§')
+		let res = await registerProject(userLogin, args[0], args[1], args[2])
+		await i.reply(res.status === 200 ? `Successfully Registered` : `Error: ${res.statusText}`)
+	})
+}
+
+async function informChannelModule(user, guild, currentModule) {
+	const config = getConfig()
+	const channelID = config[guild.id]
+	if (!channelID)
+		return;
+	const channel = guild.channels.cache.get(channelID)
+	const row = new MessageActionRow().addComponents(
+		new MessageButton()
+			.setCustomId(`${currentModule.codemodule}§${currentModule.codeinstance}`)
+			.setLabel("Register")
+			.setStyle('PRIMARY')
+	)
+	const message = await channel.send({
+		content: `@everyone, **${user.username}** just registered to **${currentModule.title}**, you can also register by clicking on the button below`,
+		components: [row]
+	})
+	const collector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: 60000 * 30 })
+	collector.on('collect', async i => {
+		const userLogin = await getLogin(i.user.id);
+		const args = i.customId.split('§')
+		let res = await registerModule(userLogin, args[0], args[1])
+		await i.reply(res.status === 200 ? `Successfully Registered` : `Error: ${res.statusText}`)
+	})
+}
+
 async function registerProject(autologin, module, city, activity, members = [], groupTitle = "") {
 	const infos = await getInfos(autologin)
 	const year = infos.scolaryear
@@ -237,6 +314,32 @@ async function unregisterEvent(autologin, module, city, activity, event) {
 	return response
 }
 
+async function getModules(autologin, start = new Date(Date.now()), end = new Date(start.getTime() + (24 * 60 * 60 * 1000))) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const response = await fetch(`${autologin}/course/filter?format=json&preload=1&location[]=${infos.location.split('/')[0]},${infos.location}&course[]=${infos.course_code}&scolaryear[]=${year}`)
+	const json = await response.json()
+	return json.items.filter((e) => {
+		const dateStart = new Date(e.begin)
+		const dateEnd = new Date(e.end)
+
+		return (start.getTime() <= dateEnd.getTime() && start.getTime() >= dateStart.getTime()) || (end.getTime() <= dateEnd.getTime() && end.getTime() >= dateStart.getTime())
+	})
+}
+
+async function getModulesRegistered(autologin, start = new Date(Date.now()), end = new Date(start.getTime() + (24 * 60 * 60 * 1000))) {
+	const infos = await getInfos(autologin)
+	const year = infos.scolaryear
+	const response = await fetch(`${autologin}/course/filter?format=json&preload=1&location[]=${infos.location.split('/')[0]},${infos.location}&course[]=${infos.course_code}&scolaryear[]=${year}`)
+	const json = await response.json()
+	return json.items.filter((e) => {
+		const dateStart = new Date(e.begin)
+		const dateEnd = new Date(e.end)
+
+		return e.status !== 'notregistered' && ((start.getTime() <= dateEnd.getTime() && start.getTime() >= dateStart.getTime()) || (end.getTime() <= dateEnd.getTime() && end.getTime() >= dateStart.getTime()))
+	})
+}
+
 module.exports = {
 	addAutoLogin,
 	removeAutoLogin,
@@ -265,5 +368,10 @@ module.exports = {
 	unregisterModule,
 	unregisterProject,
 	getConfig,
-	saveConfig
+	saveConfig,
+	informChannelActivity,
+	informChannelModule,
+	informChannelProject,
+	getModules,
+	getModulesRegistered
 }

@@ -56,6 +56,10 @@ module.exports = {
 					return;
 				}
 				const currentActivity = array[0]
+				if (Date.now() + (60 * 60 * 24 * 1000) > new Date(currentActivity.start).getTime()) {
+					await interaction.editReply({ embeds: [embed] })
+					return;
+				}
 				const row = new MessageActionRow().addComponents(
 					new MessageButton()
 						.setCustomId(`register§${currentActivity.codemodule}§${currentActivity.codeinstance}§${currentActivity.codeacti}§${currentActivity.codeevent}`)

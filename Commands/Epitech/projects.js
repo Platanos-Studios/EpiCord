@@ -61,6 +61,10 @@ module.exports = {
 			End: ${currentProject.end.substring(8, 10)}/${currentProject.end.substring(5, 7)} - ${currentProject.end.substring(11, 16)}
 			Between ${currentProject.nb_min} and ${currentProject.nb_max} persons`)
 					.setURL(`https://intra.epitech.eu/module/${currentProject.scolaryear}/${currentProject.codemodule}/${currentProject.codeinstance}/${currentProject.codeacti}/project/#!/group`)
+				if (Date.now() > new Date(currentProject.end_register).getTime()) {
+					await interaction.editReply({ embeds: [embed] })
+					return;
+				}
 				if (currentProject.nb_min <= 1) {
 					const row = new MessageActionRow().addComponents(
 						new MessageButton()

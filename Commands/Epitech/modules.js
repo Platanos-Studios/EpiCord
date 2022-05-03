@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
-const { getListProjects, getLogin, getModuleInformations, getInfos, registerModule, getListProjectRegistered, unregisterModule } = require('../../Services/requests');
+const { getListProjects, getLogin, getModuleInformations, getInfos, registerModule, getListProjectRegistered, unregisterModule, informChannelModule, getModulesRegistered, getModules } = require('../../Services/requests');
 
 module.exports = {
 	data: new SlashCommandBuilder().setName('modules').setDescription('Gets the current modules')
@@ -35,39 +35,45 @@ module.exports = {
 		const embed = new MessageEmbed().setColor('#0099ff').setTitle('Fetching the data...')
 		const message = await interaction.deferReply()
 		const login = await getLogin(interaction.member.id)
-		const data = await (registered ? getListProjectRegistered(login, start, end) : getListProjects(login, start, end))
 		let fields = []
 
 		try {
 			if (!moduleArg) {
-				fields = data.filter((e, i) => data.findIndex((el) => el.codemodule === e.codemodule) === i).map((e) => ({
-					name: e.title_module,
-					value: `${e.codemodule}`,
+				const data = await (registered ? getModulesRegistered(login, start, end) : getModules(login, start, end))
+				fields = data.map((e) => ({
+					name: e.title,
+					value: `${e.code}`,
 					inline: false
 				}))
 				embed.setTitle('Current modules').setFields(...fields)
 				await interaction.editReply({ embeds: [embed] })
 			} else {
-				let currentModule = data.filter((e) => {
-					return moduleArg && (e.title_module.includes(moduleArg) || e.codemodule.includes(moduleArg) || e.codeinstance.includes(moduleArg))
+				const data = await getModules(login, start, end)
+				fields = data
+				let currentModuleList = fields.filter((e) => {
+					return moduleArg && (e.title.includes(moduleArg) || e.code.includes(moduleArg) || e.codeinstance.includes(moduleArg))
 				})
-				if (currentModule.length > 1) {
+				if (currentModuleList.length > 1) {
 					embed.setTitle('Multiple modules found, please retry with the code given below instead of the module name')
-						.addFields(currentModule.map((e) => ({
-							name: e.title_module,
+						.addFields(currentModuleList.map((e) => ({
+							name: e.title,
 							value: `Code: ${e.codeinstance}`,
 							inline: false
 						})))
 					await interaction.editReply({ embeds: [embed] })
 					return;
 				}
-				currentModule = await getModuleInformations(login, currentModule[0].codemodule, currentModule[0].codeinstance)
+				let currentModule = await getModuleInformations(login, currentModuleList[0].code, currentModuleList[0].codeinstance)
 				embed.setTitle(currentModule.title).setDescription(`Start: ${currentModule.begin.substring(8, 10)}/${currentModule.begin.substring(5, 7)}
 			End of inscription: ${currentModule.end_register.substring(8, 10)}/${currentModule.end_register.substring(5, 7)}
 			End: ${currentModule.end.substring(8, 10)}/${currentModule.end.substring(5, 7)}
-			Credits: ${currentModule.user_credits}
+			Credits: ${currentModule.credits}
 			${currentModule.student_grade != 'N/A' ? `\nGrade: ${currentModule.student_grade}` : ''}`)
 					.setURL(`https://intra.epitech.eu/module/${currentModule.scolaryear}/${currentModule.codemodule}/${currentModule.codeinstance}`)
+				if (Date.now() > new Date(currentModule.end_register).getTime()) {
+					await interaction.editReply({ embeds: [embed] })
+					return;
+				}
 				const row = new MessageActionRow().addComponents(
 					new MessageButton()
 						.setCustomId(`register§${currentModule.codemodule}§${currentModule.codeinstance}`)
@@ -84,9 +90,11 @@ module.exports = {
 					const userLogin = await getLogin(i.user.id);
 					const args = i.customId.split('§')
 					let res = {}
-					if (args[0] == 'register')
+					if (args[0] == 'register') {
 						res = await registerModule(userLogin, args[1], args[2])
-					else if (args[0] == 'unregister')
+						if (res.status === 200)
+							informChannelModule(i.user, i.guild, currentModule)
+					} else if (args[0] == 'unregister')
 						res = await unregisterModule(userLogin, args[1], args[2])
 					await i.reply(res.status === 200 ? `Successfully ${args[0] == 'register' ? 'Registered' : 'Unregistered'}` : `Error: ${res.statusText}`)
 				})
