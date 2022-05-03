@@ -53,7 +53,7 @@ module.exports = {
 				})
 				if (currentModule.length > 1) {
 					embed.setTitle('Multiple modules found, please retry with the code given below instead of the module name')
-						.addFields(array.map((e) => ({
+						.addFields(currentModule.map((e) => ({
 							name: e.title_module,
 							value: `Code: ${e.codeinstance}`,
 							inline: false
