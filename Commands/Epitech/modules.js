@@ -48,10 +48,20 @@ module.exports = {
 				embed.setTitle('Current modules').setFields(...fields)
 				await interaction.editReply({ embeds: [embed] })
 			} else {
-				let currentModule = data.find((e) => {
-					return moduleArg && (e.title_module.includes(moduleArg) || e.codemodule.includes(moduleArg))
+				let currentModule = data.filter((e) => {
+					return moduleArg && (e.title_module.includes(moduleArg) || e.codemodule.includes(moduleArg) || e.codeinstance.includes(moduleArg))
 				})
-				currentModule = await getModuleInformations(login, currentModule.codemodule, currentModule.codeinstance)
+				if (currentModule.length > 1) {
+					embed.setTitle('Multiple modules found, please retry with the code given below instead of the module name')
+						.addFields(array.map((e) => ({
+							name: e.title_module,
+							value: `Code: ${e.codeinstance}`,
+							inline: false
+						})))
+					await interaction.editReply({ embeds: [embed] })
+					return;
+				}
+				currentModule = await getModuleInformations(login, currentModule[0].codemodule, currentModule[0].codeinstance)
 				embed.setTitle(currentModule.title).setDescription(`Start: ${currentModule.begin.substring(8, 10)}/${currentModule.begin.substring(5, 7)}
 			End of inscription: ${currentModule.end_register.substring(8, 10)}/${currentModule.end_register.substring(5, 7)}
 			End: ${currentModule.end.substring(8, 10)}/${currentModule.end.substring(5, 7)}

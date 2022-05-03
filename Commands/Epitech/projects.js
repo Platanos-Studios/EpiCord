@@ -44,8 +44,18 @@ module.exports = {
 				await interaction.editReply({ embeds: [embed] })
 			} else {
 				const data = await getListProjects(login, start, end)
-				const tmp = data.find((e) => e.acti_title.includes(project) || e.codeacti.includes(project))
-				const currentProject = await getProjectInformations(login, tmp.codemodule, tmp.codeinstance, tmp.codeacti)
+				const tmp = data.filter((e) => e.acti_title.includes(project) || e.codeacti.includes(project))
+				if (tmp.length > 1) {
+					embed.setTitle('Multiple projects found, please retry with the code given below instead of the project name')
+						.addFields(tmp.map((e) => ({
+							name: e.acti_title,
+							value: `${e.start.substring(8, 10)}/${e.start.substring(5, 7)} - ${e.start.substring(11, 16)} - ${e.room?.code ? e.room.code.split('/')[e.room.code.split('/').length - 1] : "No room"}\nCode: ${e.codeacti.split('-')[1]}`,
+							inline: false
+						})))
+					await interaction.editReply({ embeds: [embed] })
+					return;
+				}
+				const currentProject = await getProjectInformations(login, tmp[0].codemodule, tmp[0].codeinstance, tmp[0].codeacti)
 				embed.setTitle(currentProject.title).setDescription(`Start: ${currentProject.begin.substring(8, 10)}/${currentProject.begin.substring(5, 7)} - ${currentProject.begin.substring(11, 16)}
 			End of inscription: ${currentProject.end_register.substring(8, 10)}/${currentProject.end_register.substring(5, 7)} - ${currentProject.end_register.substring(11, 16)}
 			End: ${currentProject.end.substring(8, 10)}/${currentProject.end.substring(5, 7)} - ${currentProject.end.substring(11, 16)}
