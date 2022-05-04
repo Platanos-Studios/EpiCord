@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders')
 const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
-const { getModuleRegisteredActivities, getLogin, getListProjectRegistered, getListProjects, getProjectInformations, registerProject, unregisterProject } = require('../../Services/requests');
+const { getModuleRegisteredActivities, getLogin, getListProjectRegistered, getListProjects, getProjectInformations, registerProject, unregisterProject, informChannelProject } = require('../../Services/requests');
 
 module.exports = {
 	data: new SlashCommandBuilder().setName('projects').setDescription('Gets the current projects').addStringOption((option) => {
@@ -44,12 +44,12 @@ module.exports = {
 				await interaction.editReply({ embeds: [embed] })
 			} else {
 				const data = await getListProjects(login, start, end)
-				const tmp = data.filter((e) => e.acti_title.includes(project) || e.codeacti.includes(project))
+				const tmp = data.filter((e) => e.acti_title.includes(project) || e.codemodule.includes(project) || e.codeacti.includes(project))
 				if (tmp.length > 1) {
 					embed.setTitle('Multiple projects found, please retry with the code given below instead of the project name')
 						.addFields(tmp.map((e) => ({
 							name: e.acti_title,
-							value: `${e.start.substring(8, 10)}/${e.start.substring(5, 7)} - ${e.start.substring(11, 16)} - ${e.room?.code ? e.room.code.split('/')[e.room.code.split('/').length - 1] : "No room"}\nCode: ${e.codeacti.split('-')[1]}`,
+							value: `${e.begin_acti.substring(8, 10)}/${e.begin_acti.substring(5, 7)} - ${e.begin_acti.substring(11, 16)} - ${e.room?.code ? e.room.code.split('/')[e.room.code.split('/').length - 1] : "No room"}\nCode: ${e.codeacti.split('-')[1]}`,
 							inline: false
 						})))
 					await interaction.editReply({ embeds: [embed] })
@@ -82,9 +82,15 @@ module.exports = {
 						const userLogin = await getLogin(i.user.id);
 						const args = i.customId.split('§')
 						let res = {}
-						if (args[0] == 'register')
+						if (args[0] == 'register') {
 							res = await registerProject(userLogin, args[1], args[2], args[3])
-						else if (args[0] == 'unregister')
+							if (res.status === 200)
+								informChannelProject(i.user, i.guild, {
+									codemodule: args[1],
+									codeinstance: args[2],
+									codeacti: args[3]
+								})
+						} else if (args[0] == 'unregister')
 							res = await unregisterProject(userLogin, args[1], args[2], args[3])
 						await i.reply(res.status === 200 ? `Successfully ${args[0] == 'register' ? 'Registered' : 'Unregistered'}` : `Error: ${res.statusText}`)
 					})

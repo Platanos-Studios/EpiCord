@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders')
 const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
-const { getRegisteredActivities, getLogin, getActivities, registerEvent, unregisterEvent, getConfig } = require("../../Services/requests.js")
+const { getRegisteredActivities, getLogin, getActivities, registerEvent, unregisterEvent, getConfig, informChannelActivity } = require("../../Services/requests.js")
 
 module.exports = {
 	data: new SlashCommandBuilder().setName('activities').setDescription('Gets the intra activities between two dates, default is today and tomorrow').addStringOption((option) => {
@@ -56,6 +56,10 @@ module.exports = {
 					return;
 				}
 				const currentActivity = array[0]
+				embed.setTitle(currentActivity.acti_title)
+					.setURL(`https://intra.epitech.eu/module/${currentActivity.scolaryear}/${currentActivity.codemodule}/${currentActivity.codeinstance}/${currentActivity.codeacti}/${currentActivity.codeevent}/registered`)
+					.setDescription(`Date: ${currentActivity.start.substring(8, 10)}/${currentActivity.start.substring(5, 7)} - ${currentActivity.start.substring(11, 16)}
+				Room: ${currentActivity.room?.code ? currentActivity.room.code.split('/')[currentActivity.room.code.split('/').length - 1] : "None"}`)
 				if (Date.now() + (60 * 60 * 24 * 1000) > new Date(currentActivity.start).getTime()) {
 					await interaction.editReply({ embeds: [embed] })
 					return;
@@ -70,10 +74,6 @@ module.exports = {
 						.setLabel("Unregister")
 						.setStyle('DANGER')
 				)
-				embed.setTitle(currentActivity.acti_title)
-					.setURL(`https://intra.epitech.eu/module/${currentActivity.scolaryear}/${currentActivity.codemodule}/${currentActivity.codeinstance}/${currentActivity.codeacti}/${currentActivity.codeevent}/registered`)
-					.setDescription(`Date: ${currentActivity.start.substring(8, 10)}/${currentActivity.start.substring(5, 7)} - ${currentActivity.start.substring(11, 16)}
-				Room: ${currentActivity.room?.code ? currentActivity.room.code.split('/')[currentActivity.room.code.split('/').length - 1] : "None"}`)
 				const message = await interaction.editReply({ embeds: [embed], components: [row] })
 				const collector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: 60000 * 5 })
 				collector.on('collect', async i => {
@@ -82,11 +82,13 @@ module.exports = {
 					let res = {}
 					if (args[0] == 'register') {
 						res = await registerEvent(userLogin, args[1], args[2], args[3], args[4])
+						if (res.status === 200)
+							informChannelActivity(i.user, i.guild, currentActivity)
 					}
 					else if (args[0] == 'unregister')
 						res = await unregisterEvent(userLogin, args[1], args[2], args[3], args[4])
-						await i.reply(res.status === 200 ? `Successfully ${args[0] == 'register' ? 'Registered' : 'Unregistered'}` : `Error: ${res.statusText}`)
-					})
+					await i.reply(res.status === 200 ? `Successfully ${args[0] == 'register' ? 'Registered' : 'Unregistered'}` : `Error: ${res.statusText}`)
+				})
 			}
 		} catch (e) {
 			console.log(e);

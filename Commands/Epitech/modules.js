@@ -93,7 +93,10 @@ module.exports = {
 					if (args[0] == 'register') {
 						res = await registerModule(userLogin, args[1], args[2])
 						if (res.status === 200)
-							informChannelModule(i.user, i.guild, currentModule)
+							informChannelModule(i.user, i.guild, {
+								codemodule: args[1],
+								codeacti: args[2]
+							})
 					} else if (args[0] == 'unregister')
 						res = await unregisterModule(userLogin, args[1], args[2])
 					await i.reply(res.status === 200 ? `Successfully ${args[0] == 'register' ? 'Registered' : 'Unregistered'}` : `Error: ${res.statusText}`)

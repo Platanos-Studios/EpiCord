@@ -180,7 +180,7 @@ async function informChannelActivity(user, guild, currentActivity) {
 			.setStyle('PRIMARY')
 	)
 	const message = await channel.send({
-		content: `@everyone, ${user.username} just registered to ${currentActivity.title}, you can also register by clicking on the button below`,
+		content: `@everyone, **${user.username}** just registered to **${currentActivity.acti_title}**, you can also register by clicking on the button below`,
 		components: [row]
 	})
 	const collector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: 60000 * 30 })
@@ -205,7 +205,7 @@ async function informChannelProject(user, guild, currentProject) {
 			.setStyle('PRIMARY')
 	)
 	const message = await channel.send({
-		content: `@everyone, ${user.username} just registered to ${currentProject.title}, you can also register by clicking on the button below`,
+		content: `@everyone, **${user.username}** just registered to **${currentProject.title}**, you can also register by clicking on the button below`,
 		components: [row]
 	})
 	const collector = message.createMessageComponentCollector({ componentType: 'BUTTON', time: 60000 * 30 })
